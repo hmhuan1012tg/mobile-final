@@ -35,6 +35,8 @@ import com.ontbee.legacyforks.cn.pedant.SweetAlert.SweetAlertDialog;
 
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import at.wirecube.additiveanimations.additive_animator.AdditiveAnimator;
 import retrofit2.Call;
@@ -50,6 +52,7 @@ public class LearningFragment extends Fragment {
     ArrayList<View.OnTouchListener> listeners = new ArrayList<>();
     ConstraintLayout topicLayout;
     public int chosenTopic = -1;
+    public boolean isAnimating = false;
 
     public static final int TOPIC_MARGIN_TOP = 256;
     public static final int TOPIC_MARGIN_LEFT = 64;
@@ -112,9 +115,7 @@ public class LearningFragment extends Fragment {
         buildTopicsViews();
         addTouchListeners();
         arrangeTopicNodes();
-
     }
-
 
     private void initLayout(View view) {
         scroll = view.findViewById(R.id.scrollview_dashboard_learning);
@@ -122,11 +123,16 @@ public class LearningFragment extends Fragment {
     }
 
     private void backToTopicList() {
+        if (isAnimating)
+            return;
+
+        isAnimating = true;
         final ConstraintSet constraintSet = new ConstraintSet();
         final TopicNode node = nodeList.get(chosenTopic);
         final ConnectLineView line = lines.get(chosenTopic);
 
-        node.setEnabled(true);
+
+        node.setEnabled(false);
         node.hideLessonList();
 
         line.animate()
@@ -144,12 +150,14 @@ public class LearningFragment extends Fragment {
         nodeMover.setDuration(500 + 50 * chosenTopic);
         nodeMover.setInterpolator(new AccelerateDecelerateInterpolator());
         final int tempChosen = chosenTopic;
-        chosenTopic = -1;
 
         nodeMover.addListener(new AnimatorListenerAdapter() {
             @SuppressLint("ClickableViewAccessibility")
             @Override
             public void onAnimationEnd(Animator animation) {
+
+                chosenTopic = -1;
+                node.setEnabled(true);
                 scroll.smoothScrollTo(0, node.getTop());
 
                 if (tempChosen > 0) {
@@ -191,6 +199,12 @@ public class LearningFragment extends Fragment {
                             });
                 }
                 node.setOnTouchListener(listeners.get(tempChosen));
+                new Timer().schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        isAnimating = false;
+                    }
+                }, 300);
             }
         });
         nodeMover.start();
@@ -250,9 +264,11 @@ public class LearningFragment extends Fragment {
                         case MotionEvent.ACTION_DOWN:
                         case MotionEvent.ACTION_POINTER_DOWN: {
                             if (node.circleTouched(x, y)) {
+                                if (isAnimating)
+                                    return false;
+                                isAnimating = true;
                                 node.setEnabled(false);
 
-                                chosenTopic = index;
                                 final ConnectLineView line = lines.get(index);
 
                                 for (int j = 0; j < nodeList.size(); j++) {
@@ -289,8 +305,7 @@ public class LearningFragment extends Fragment {
                                 nodeMover.addListener(new AnimatorListenerAdapter() {
                                     @Override
                                     public void onAnimationEnd(Animator animation) {
-                                        node.setClickable(false);
-
+                                        chosenTopic = index;
                                         line.height = 0;
                                         line.setVisibility(View.VISIBLE);
                                         line.setAlpha(1.0f);
@@ -338,6 +353,12 @@ public class LearningFragment extends Fragment {
                                             }
                                         });
                                         animator.start();
+                                        new Timer().schedule(new TimerTask() {
+                                            @Override
+                                            public void run() {
+                                                isAnimating = false;
+                                            }
+                                        }, 300);
                                     }
                                 });
                                 nodeMover.start();

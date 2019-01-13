@@ -542,8 +542,13 @@ public class DashboardActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (((LearningFragment)pagerAdapter.getFragment(0)).chosenTopic < 0)
+        int chosen = ((LearningFragment)pagerAdapter.getFragment(0)).chosenTopic;
+        boolean animating = ((LearningFragment)pagerAdapter.getFragment(0)).isAnimating;
+
+        if (chosen < 0 && !animating) {
+            LoginManager.getInstance().logOut();
             helper.finish();
+        }
         else
             ((LearningFragment)pagerAdapter.getFragment(0)).goTobackToTopicList();
     }

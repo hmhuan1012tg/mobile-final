@@ -25,6 +25,7 @@ import com.facebook.FacebookException;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
 import com.facebook.Profile;
+import com.facebook.ProfileTracker;
 import com.facebook.appevents.AppEventsLogger;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
@@ -131,11 +132,30 @@ public class LoginActivity extends Activity {
     }
     private void initFacebookLoginEvents(){
             loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+
+                private ProfileTracker mProfileTracker;
+
             @Override
             public void onSuccess(LoginResult loginResult) {
                 accessToken = loginResult.getAccessToken();
-                Toast.makeText(getApplicationContext(), "Login succeeded", Toast.LENGTH_SHORT).show();
-                toDashboardActivity();
+                if(Profile.getCurrentProfile() == null) {
+                    mProfileTracker = new ProfileTracker() {
+                        @Override
+                        protected void onCurrentProfileChanged(Profile oldProfile, Profile currentProfile) {
+                            profile = Profile.getCurrentProfile();
+                            Toast.makeText(getApplicationContext(), "Login succeeded", Toast.LENGTH_SHORT).show();
+                            toDashboardActivity();
+                            mProfileTracker.stopTracking();
+                        }
+                    };
+                    // no need to call startTracking() on mProfileTracker
+                    // because it is called by its constructor, internally.
+                }
+                else {
+                    profile = Profile.getCurrentProfile();
+                    Toast.makeText(getApplicationContext(), "Login succeeded", Toast.LENGTH_SHORT).show();
+                    toDashboardActivity();
+                }
             }
 
             @Override
